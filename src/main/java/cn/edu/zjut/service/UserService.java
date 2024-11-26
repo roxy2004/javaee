@@ -1,28 +1,49 @@
 package cn.edu.zjut.service;
-
-import cn.edu.zjut.bean.UserBean;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
 import java.util.List;
 
-@Service("userServ")
-public class UserService implements IUserService{
-    private List<UserBean> users = new ArrayList<>();
-    public List<UserBean> getAllUsers() {
-        return users;
+import cn.edu.zjut.util.HibernateUtil;
+import org.hibernate.SessionFactory;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
+import org.hibernate.cfg.Configuration;
+import cn.edu.zjut.po.Customer;
+import cn.edu.zjut.dao.CustomerDAO;
+public class UserService {
+
+    public Session getSession() {
+        return HibernateUtil.getSession();
     }
-    public boolean login(UserBean loginUser) {
-        if (loginUser.getUsername().equals(loginUser.getPassword())){
+    public boolean login(Customer loginUser) {
+        String account = loginUser.getAccount();
+        String password = loginUser.getPassword();
+        String hql = "from Customer as user where account='"
+                +account+ "' and password='" + password +"'";
+        Session session=this.getSession();
+        CustomerDAO dao = new CustomerDAO();
+        dao.setSession(session);
+        List list = dao.findByHql(hql);
+        HibernateUtil.closeSession();
+        if(list.isEmpty())
+            return false;
+        else
             return true;
-        }
-        return false;
     }
-    public boolean addUser(UserBean user) {
-        if (user.getUsername().equals(user.getPassword())) {
-            users.add(user);
+    public boolean register(Customer loginUser) {
+        Session session=this.getSession();
+        CustomerDAO dao = new CustomerDAO();
+        dao.setSession(session);
+        Transaction tran = null;
+        try {
+            tran = session.beginTransaction();
+            dao.save(loginUser);
+            tran.commit();
             return true;
+        } catch (Exception e) {
+            System.out.println("save customer failed "+ e);
+            return false;
+        } finally {
+            HibernateUtil.closeSession();
         }
-        return false;
     }
 }
+
